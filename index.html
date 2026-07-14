@@ -46,9 +46,10 @@
       flex-direction: column;
       align-items: center;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
-    /* Splash screen mantido com fundo mais escuro e gradiente ajustado */
+    /* Splash screen (mantido) */
     .splash-screen {
       position: fixed;
       top: 0;
@@ -270,7 +271,7 @@
 
     .content-area {
       flex: 1;
-      padding: 20px 20px 160px 20px; /* Aumentado para dar espaço ao rodapé fixo */
+      padding: 20px 20px 220px 20px; /* Padding inferior grande para o rodapé fixo */
       display: flex;
       flex-direction: column;
     }
@@ -636,10 +637,11 @@
       letter-spacing: 0.02em;
     }
 
-    /* Ajustes para telas muito pequenas */
+    /* Ajuste para telas muito pequenas */
     @media (max-width: 380px) {
       .item .info .meta { font-size: 11px; gap: 4px; }
       .item .qty-input { width: 60px; }
+      .content-area { padding-bottom: 240px; }
     }
   </style>
 </head>
@@ -750,7 +752,7 @@
   });
 </script>
 
-<!-- NOVO SPLASH SCREEN -->
+<!-- Splash Screen -->
 <div id="splash-screen" class="splash-screen">
   <div class="splash-background"></div>
   <div class="grid"></div>
