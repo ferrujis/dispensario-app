@@ -702,6 +702,13 @@
     return logs;
   };
 
+  window.apagarTodosLogsDB = async function() {
+    const snapshot = await getDocs(collection(db, "logs"));
+    const promises = [];
+    snapshot.forEach(documento => promises.push(deleteDoc(doc(db, "logs", documento.id))));
+    await Promise.all(promises);
+  };
+
   window.adicionarCompraDB = async function(compraData) {
     const snapshot = await getDocs(collection(db, "compras"));
     let existe = false;
@@ -858,17 +865,45 @@
       <h1>Painel Administrativo</h1>
       <p class="sub">Gestão de dados e histórico (Nuvem).</p>
 
+      <div id="admin-stats" style="display:grid; grid-template-columns: repeat(2,1fr); gap:10px; margin-bottom:28px;"></div>
+
       <h3 style="margin-bottom: 12px; font-size: 16px;">📦 Base de Estoque (.xlsx)</h3>
-      <div class="admin-log" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px;">
+      <div class="admin-log" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
         <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Faça upload de uma planilha do Excel contendo as colunas: <strong style="color:var(--text-main);">Categoria, Nome, Apresentação, Mínimo</strong> na primeira aba.</p>
         <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="font-size: 14px; padding: 10px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-main);">
         <button class="btn-primary" style="padding: 12px; font-size: 14px;" onclick="importarPlanilha()">Importar Planilha</button>
+        <button class="btn-ghost" style="background: var(--surface-color); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; font-size: 14px;" onclick="exportarBaseExcel()">⬇️ Exportar Base Atual (.xlsx)</button>
+      </div>
+
+      <h3 style="margin-bottom: 12px; font-size: 16px;">🧾 Gerenciar Itens da Base</h3>
+      <div class="admin-log" style="margin-bottom: 20px;">
+        <div class="search-wrap" style="margin-bottom: 12px;">
+          <span class="icon">🔍</span>
+          <input type="text" id="admin-item-search" placeholder="Buscar item por nome ou categoria..." autocomplete="off">
+        </div>
+        <div id="admin-items-list" style="display:flex; flex-direction:column; gap:8px; max-height: 320px; overflow-y:auto;"></div>
+        <div style="border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px;">
+          <p style="font-size:13px; font-weight:600; color: var(--text-main); margin: 0 0 8px;">➕ Adicionar novo item</p>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <input type="text" id="new-item-categoria" placeholder="Categoria" style="padding:10px; border:1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-main); font-size:13px;">
+            <input type="text" id="new-item-nome" placeholder="Nome" style="padding:10px; border:1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-main); font-size:13px;">
+            <input type="text" id="new-item-apresentacao" placeholder="Apresentação" style="padding:10px; border:1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-main); font-size:13px;">
+            <input type="number" id="new-item-minimo" placeholder="Mínimo" style="padding:10px; border:1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-main); font-size:13px;">
+            <button class="btn-primary" style="padding: 12px; font-size: 14px;" onclick="adicionarItemManual()">Adicionar Item</button>
+          </div>
+        </div>
       </div>
 
       <h3 style="margin-bottom: 12px; font-size: 16px;">🛒 Pendências de Compra</h3>
       <div id="compras-container" style="margin-bottom: 32px;"></div>
 
-      <h3 style="margin-bottom: 12px; font-size: 16px;">📋 Logs do Sistema</h3>
+      <h3 style="margin-bottom: 12px; font-size: 16px; display:flex; justify-content:space-between; align-items:center;">
+        <span>📋 Logs do Sistema</span>
+        <div style="display:flex; gap:8px;">
+          <button onclick="exportarLogsCSV()" style="font-size:11px; padding:6px 10px; border-radius: var(--radius-sm); border:1px solid var(--border); background: var(--surface-color); color: var(--text-main); font-weight:600; cursor:pointer;">⬇️ Exportar</button>
+          <button onclick="limparTodosLogs()" style="font-size:11px; padding:6px 10px; border-radius: var(--radius-sm); border:1px solid var(--danger); background: var(--danger-soft); color: var(--danger); font-weight:600; cursor:pointer;">🗑️ Limpar</button>
+        </div>
+      </h3>
       <div id="logs-container"></div>
 
       <div class="fixed-bottom">
@@ -1132,6 +1167,9 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAdmin(); });
 
   async function carregarAdmin() {
+    renderAdminStats();
+    renderAdminItems();
+
     const comprasContainer = document.getElementById('compras-container');
     const logsContainer = document.getElementById('logs-container');
     
@@ -1141,6 +1179,7 @@
     if (!window.buscarComprasDB) return; 
 
     const compras = await window.buscarComprasDB();
+    window._comprasCache = compras;
     if (compras.length === 0) {
       comprasContainer.innerHTML = '<p style="color:var(--text-muted); font-size: 14px;">Sem pendências de compras.</p>';
     } else {
@@ -1160,6 +1199,7 @@
     }
 
     const logs = await window.buscarLogsDB();
+    window._logsCache = logs;
     if (logs.length === 0) {
       logsContainer.innerHTML = '<p style="color:var(--text-muted); font-size: 14px;">Nenhum registro encontrado.</p>';
     } else {
@@ -1169,7 +1209,169 @@
       });
       logsContainer.innerHTML = html;
     }
+    renderAdminStats();
   }
+
+  // =====================================
+  // Estatísticas rápidas do painel admin
+  // =====================================
+  function renderAdminStats() {
+    const el = document.getElementById('admin-stats');
+    if (!el) return;
+    const totalItens = window.inventoryData ? window.inventoryData.length : 0;
+    const categorias = window.inventoryData ? new Set(window.inventoryData.map(i => i.categoria)).size : 0;
+    const pendencias = window._comprasCache ? window._comprasCache.length : 0;
+    const logsCount = window._logsCache ? window._logsCache.length : 0;
+
+    const cardStyle = 'background: var(--surface-color); border:1px solid var(--border); border-radius: var(--radius-md); padding:14px; text-align:center;';
+    const numStyle = 'font-size:22px; font-weight:800; color: var(--accent); display:block;';
+    const labelStyle = 'font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.03em;';
+
+    el.innerHTML = `
+      <div style="${cardStyle}"><span style="${numStyle}">${totalItens}</span><span style="${labelStyle}">Itens na Base</span></div>
+      <div style="${cardStyle}"><span style="${numStyle}">${categorias}</span><span style="${labelStyle}">Categorias</span></div>
+      <div style="${cardStyle}"><span style="${numStyle}">${pendencias}</span><span style="${labelStyle}">Compras Pendentes</span></div>
+      <div style="${cardStyle}"><span style="${numStyle}">${logsCount}</span><span style="${labelStyle}">Conferências Registradas</span></div>
+    `;
+  }
+
+  // =====================================
+  // Gerenciar itens da base (buscar/editar/excluir/adicionar)
+  // =====================================
+  let adminItemFilter = '';
+
+  function renderAdminItems() {
+    const list = document.getElementById('admin-items-list');
+    if (!list) return;
+    const filter = adminItemFilter.toLowerCase().trim();
+    const data = window.inventoryData || [];
+
+    const filtered = data
+      .map((item, idx) => ({ item, idx }))
+      .filter(({ item }) => !filter || (item.nome + ' ' + item.categoria).toLowerCase().includes(filter));
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<p style="color:var(--text-muted); font-size:13px; margin:0;">Nenhum item encontrado.</p>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(({ item, idx }) => `
+      <div style="display:flex; align-items:center; gap:8px; background: var(--bg-color); border:1px solid var(--border); border-radius: var(--radius-sm); padding:10px;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:13px; font-weight:600; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.nome}</div>
+          <div style="font-size:11px; color:var(--text-muted);">${item.categoria} · ${item.apresentacao}</div>
+        </div>
+        <label style="font-size:10px; color:var(--text-muted); text-align:center;">Mín.
+          <input type="number" value="${item.minimo}" data-idx="${idx}" onchange="editarMinimoItem(${idx}, this.value)" style="width:52px; padding:6px; border:1px solid var(--border); border-radius:6px; background: var(--surface-color); color: var(--text-main); font-size:13px; text-align:center; display:block; margin-top:2px;">
+        </label>
+        <button onclick="excluirItemBase(${idx})" title="Excluir item" style="background: var(--danger-soft); color: var(--danger); border:none; border-radius:6px; width:32px; height:32px; font-size:14px; cursor:pointer; flex-shrink:0;">🗑️</button>
+      </div>
+    `).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchAdmin = document.getElementById('admin-item-search');
+    if (searchAdmin) {
+      searchAdmin.addEventListener('input', function() { adminItemFilter = this.value; renderAdminItems(); });
+    }
+  });
+
+  async function persistirBaseAtualizada(mensagemLoading) {
+    const overlay = document.getElementById('loading-overlay');
+    document.getElementById('loading-text').textContent = mensagemLoading || 'Atualizando banco...';
+    overlay.classList.add('active');
+    try {
+      if (window.salvarBaseDB) { await window.salvarBaseDB(window.inventoryData); }
+      document.getElementById('total-items-count').textContent = window.inventoryData.length + ' itens';
+      renderAdminStats();
+      renderAdminItems();
+    } catch (err) {
+      alert('Erro ao salvar no banco: ' + err.message);
+    } finally {
+      overlay.classList.remove('active');
+    }
+  }
+
+  window.editarMinimoItem = async function(idx, novoValor) {
+    const val = parseInt(novoValor);
+    if (isNaN(val) || val < 0) { alert('Informe um valor mínimo válido.'); renderAdminItems(); return; }
+    window.inventoryData[idx].minimo = val;
+    await persistirBaseAtualizada('Salvando novo mínimo...');
+  };
+
+  window.excluirItemBase = async function(idx) {
+    const item = window.inventoryData[idx];
+    if (!confirm(`Excluir "${item.nome}" da base de estoque?`)) return;
+    window.inventoryData.splice(idx, 1);
+    await persistirBaseAtualizada('Removendo item...');
+  };
+
+  window.adicionarItemManual = async function() {
+    const categoria = document.getElementById('new-item-categoria').value.trim();
+    const nome = document.getElementById('new-item-nome').value.trim();
+    const apresentacao = document.getElementById('new-item-apresentacao').value.trim();
+    const minimo = parseInt(document.getElementById('new-item-minimo').value);
+
+    if (!nome) { alert('Informe o nome do item.'); return; }
+    if (isNaN(minimo) || minimo < 0) { alert('Informe um estoque mínimo válido.'); return; }
+
+    window.inventoryData.push({
+      categoria: categoria || 'Geral',
+      nome,
+      apresentacao: apresentacao || '-',
+      minimo
+    });
+
+    document.getElementById('new-item-categoria').value = '';
+    document.getElementById('new-item-nome').value = '';
+    document.getElementById('new-item-apresentacao').value = '';
+    document.getElementById('new-item-minimo').value = '';
+
+    await persistirBaseAtualizada('Adicionando item...');
+  };
+
+  // =====================================
+  // Exportar base e logs
+  // =====================================
+  window.exportarBaseExcel = function() {
+    if (!window.inventoryData || window.inventoryData.length === 0) { alert('Não há itens na base para exportar.'); return; }
+    const rows = [['Categoria', 'Nome', 'Apresentação', 'Mínimo']];
+    window.inventoryData.forEach(item => rows.push([item.categoria, item.nome, item.apresentacao, item.minimo]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Base de Estoque');
+    XLSX.writeFile(wb, `base_estoque_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  window.exportarLogsCSV = function() {
+    const logs = window._logsCache || [];
+    if (logs.length === 0) { alert('Não há logs para exportar.'); return; }
+    let csv = 'Data,IP,Localização\n';
+    logs.forEach(log => {
+      csv += `"${log.data}","${log.ip}","${log.localizacao}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `logs_conferencias_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  window.limparTodosLogs = async function() {
+    if (!confirm('Tem certeza que deseja apagar TODOS os logs do sistema? Essa ação não pode ser desfeita.')) return;
+    const overlay = document.getElementById('loading-overlay');
+    document.getElementById('loading-text').textContent = 'Apagando logs...';
+    overlay.classList.add('active');
+    try {
+      if (window.apagarTodosLogsDB) { await window.apagarTodosLogsDB(); }
+      await carregarAdmin();
+    } catch (err) {
+      alert('Erro ao apagar logs: ' + err.message);
+    } finally {
+      overlay.classList.remove('active');
+    }
+  };
 
   async function removerCompra(id) {
     if (window.removerCompraDB) {
