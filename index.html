@@ -389,64 +389,68 @@
 
     .item-list { display: flex; flex-direction: column; gap: 12px; }
     .item, .result-item {
-      background: var(--surface-color);
+      background: linear-gradient(155deg, #10201c 0%, #0d1a17 100%);
       border-radius: var(--radius-md);
       padding: 16px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(0, 210, 160, 0.06);
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 12px;
       align-items: center;
       transition: var(--transition);
-      border: 1px solid transparent;
+      border: 1px solid rgba(0, 210, 160, 0.18);
     }
     .item:hover, .result-item:hover {
-      background: var(--surface-hover);
-      box-shadow: var(--shadow-md);
+      background: linear-gradient(155deg, #142c26 0%, #10211d 100%);
+      border-color: rgba(0, 210, 160, 0.4);
+      box-shadow: var(--shadow-md), 0 0 0 1px rgba(0, 210, 160, 0.12);
       transform: translateY(-2px);
     }
     
     .item .info, .result-item .info { min-width: 0; }
     .item .info .name, .result-item .info .name {
-      font-weight: 600;
+      font-weight: 700;
       font-size: 15px;
-      color: var(--text-main);
+      color: #ffffff;
       margin-bottom: 4px;
+      letter-spacing: -0.01em;
     }
     .item .info .meta, .result-item .info .detail {
       font-size: 12px;
-      color: var(--text-muted);
+      color: #a8c9c0;
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
       align-items: center;
+      font-weight: 500;
     }
     .item .info .meta .cat {
-      background: var(--bg-color);
+      background: rgba(0, 210, 160, 0.14);
+      border: 1px solid rgba(0, 210, 160, 0.35);
       padding: 2px 8px;
       border-radius: 6px;
-      font-weight: 600;
-      color: var(--text-main);
+      font-weight: 700;
+      color: #4dffcf;
     }
     
     .input-group { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
     .item .qty-input {
       width: 70px;
       padding: 10px 4px;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(0, 210, 160, 0.3);
       border-radius: var(--radius-sm);
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       text-align: center;
-      background: var(--surface-color);
-      color: var(--text-main);
+      background: #0a1614;
+      color: #ffffff;
       transition: var(--transition);
       font-family: 'JetBrains Mono', monospace;
     }
     .item .qty-input:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft);
+      box-shadow: 0 0 0 3px rgba(0, 210, 160, 0.25);
     }
     .item .qty-input.filled {
       border-color: var(--success);
