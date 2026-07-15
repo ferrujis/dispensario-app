@@ -271,9 +271,20 @@
 
     .content-area {
       flex: 1;
-      padding: 20px 20px 220px 20px; /* Padding inferior grande para o rodapé fixo */
+      padding: 20px 20px calc(220px + env(safe-area-inset-bottom)) 20px; /* Padding inferior grande para o rodapé fixo */
       display: flex;
       flex-direction: column;
+    }
+    /* A tela de conferência (lista de itens) precisa de folga extra no final,
+       para que o último item da planilha não fique escondido atrás do rodapé fixo */
+    #screen-2 .item-list,
+    #screen-3 .item-list {
+      padding-bottom: calc(150px + env(safe-area-inset-bottom));
+    }
+    /* Painel Administrativo também tem rodapé fixo, então o último bloco
+       (logs do sistema) precisa da mesma folga extra */
+    #screen-4 {
+      padding-bottom: calc(150px + env(safe-area-inset-bottom));
     }
 
     .screen { display: none; animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -641,7 +652,7 @@
     @media (max-width: 380px) {
       .item .info .meta { font-size: 11px; gap: 4px; }
       .item .qty-input { width: 60px; }
-      .content-area { padding-bottom: 240px; }
+      .content-area { padding-bottom: calc(260px + env(safe-area-inset-bottom)); }
     }
   </style>
 </head>
